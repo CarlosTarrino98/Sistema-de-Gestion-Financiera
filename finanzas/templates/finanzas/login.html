@@ -1,35 +1,466 @@
 {% load static %}
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>ODA — Iniciar sesión</title>
+    <link rel="icon" href="{% static 'finanzas/img/favicon.svg' %}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{% static 'finanzas/img/favicon.svg' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #13241e;
+            --moss: #2a5c48;
+            --sage: #7f9f8c;
+            --mist: #d9e5de;
+            --foam: #f4f8f5;
+            --line: rgba(19, 36, 30, 0.12);
+            --danger: #9b3a2f;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Figtree", sans-serif;
+            color: var(--ink);
+            background: var(--foam);
+            overflow-x: hidden;
+        }
+
+        .scene {
+            position: relative;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 2rem 1.25rem;
+            isolation: isolate;
+            overflow: hidden;
+            background: linear-gradient(160deg, #7fa99a 0%, #6b9688 45%, #5a8578 100%);
+        }
+
+        .aurora {
+            position: absolute;
+            inset: -20%;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(64px);
+            will-change: transform;
+            mix-blend-mode: multiply;
+            opacity: 0.88;
+        }
+
+        .blob-a {
+            width: min(58vw, 520px);
+            height: min(58vw, 520px);
+            top: 5%;
+            left: -5%;
+            background: #5f9a8a;
+            animation: float-a 18s ease-in-out infinite;
+        }
+
+        .blob-b {
+            width: min(62vw, 560px);
+            height: min(62vw, 560px);
+            top: -8%;
+            right: -10%;
+            background: #6a8f9a;
+            animation: float-b 22s ease-in-out infinite;
+        }
+
+        .blob-c {
+            width: min(70vw, 640px);
+            height: min(70vw, 640px);
+            bottom: -15%;
+            left: 20%;
+            background: #4f8578;
+            animation: float-c 20s ease-in-out infinite;
+        }
+
+        .blob-d {
+            width: min(48vw, 420px);
+            height: min(48vw, 420px);
+            top: 40%;
+            left: 35%;
+            background: #7aada0;
+            opacity: 0.95;
+            animation: float-d 16s ease-in-out infinite;
+        }
+
+        .blob-e {
+            width: min(42vw, 380px);
+            height: min(42vw, 380px);
+            top: 15%;
+            left: 45%;
+            background: #5b8a96;
+            animation: float-e 19s ease-in-out infinite;
+        }
+
+        .blob-f {
+            width: min(55vw, 480px);
+            height: min(55vw, 480px);
+            bottom: 5%;
+            right: -8%;
+            background: #468274;
+            animation: float-f 24s ease-in-out infinite;
+        }
+
+        .blob-g {
+            width: min(36vw, 320px);
+            height: min(36vw, 320px);
+            top: 55%;
+            left: -2%;
+            background: #6d9c8e;
+            animation: float-g 17s ease-in-out infinite;
+        }
+
+        .blob-h {
+            width: min(40vw, 360px);
+            height: min(40vw, 360px);
+            top: 70%;
+            left: 55%;
+            background: #5a7f8c;
+            animation: float-h 21s ease-in-out infinite;
+        }
+
+        .scene::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            opacity: 0.22;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2313241e' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        @keyframes float-a {
+            0%   { transform: translate(0, 0) scale(1); }
+            33%  { transform: translate(28vw, 18vh) scale(1.15); }
+            66%  { transform: translate(8vw, 42vh) scale(0.92); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        @keyframes float-b {
+            0%   { transform: translate(0, 0) scale(1.05); }
+            40%  { transform: translate(-30vw, 28vh) scale(0.9); }
+            70%  { transform: translate(-12vw, 50vh) scale(1.2); }
+            100% { transform: translate(0, 0) scale(1.05); }
+        }
+
+        @keyframes float-c {
+            0%   { transform: translate(0, 0) scale(1); }
+            25%  { transform: translate(-18vw, -22vh) scale(1.18); }
+            55%  { transform: translate(22vw, -35vh) scale(0.88); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        @keyframes float-d {
+            0%   { transform: translate(0, 0) scale(0.95); }
+            50%  { transform: translate(-20vw, -15vh) scale(1.25); }
+            100% { transform: translate(0, 0) scale(0.95); }
+        }
+
+        @keyframes float-e {
+            0%   { transform: translate(0, 0) scale(1); }
+            35%  { transform: translate(-22vw, 20vh) scale(1.2); }
+            70%  { transform: translate(14vw, 32vh) scale(0.85); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        @keyframes float-f {
+            0%   { transform: translate(0, 0) scale(1.1); }
+            45%  { transform: translate(-28vw, -25vh) scale(0.9); }
+            100% { transform: translate(0, 0) scale(1.1); }
+        }
+
+        @keyframes float-g {
+            0%   { transform: translate(0, 0) scale(0.9); }
+            30%  { transform: translate(24vw, -28vh) scale(1.15); }
+            65%  { transform: translate(10vw, -10vh) scale(1); }
+            100% { transform: translate(0, 0) scale(0.9); }
+        }
+
+        @keyframes float-h {
+            0%   { transform: translate(0, 0) scale(1); }
+            40%  { transform: translate(-16vw, -30vh) scale(1.22); }
+            80%  { transform: translate(12vw, -18vh) scale(0.88); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .blob {
+                animation: none;
+            }
+        }
+
+        @keyframes rise {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .panel {
+            width: 100%;
+            max-width: 420px;
+            animation: rise 0.7s ease-out both;
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 1.75rem;
+            animation: rise 0.7s ease-out 0.08s both;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-family: "Bricolage Grotesque", sans-serif;
+            font-weight: 800;
+            font-size: clamp(3.4rem, 12vw, 4.75rem);
+            letter-spacing: -0.04em;
+            line-height: 0.9;
+            color: var(--foam);
+        }
+
+        .brand p {
+            margin: 0.85rem 0 0;
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: color-mix(in srgb, var(--foam) 78%, transparent);
+        }
+
+        .auth {
+            background: rgba(244, 248, 245, 0.78);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 1.75rem 1.5rem 1.5rem;
+            animation: rise 0.7s ease-out 0.16s both;
+        }
+
+        .auth h2 {
+            margin: 0 0 1.25rem;
+            font-family: "Bricolage Grotesque", sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: color-mix(in srgb, var(--ink) 75%, transparent);
+        }
+
+        .field {
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.85);
+            color: var(--ink);
+            font: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .password-wrap {
+            position: relative;
+        }
+
+        .password-wrap input {
+            padding-right: 3rem;
+        }
+
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 0.55rem;
+            transform: translateY(-50%);
+            display: grid;
+            place-items: center;
+            width: 2.2rem;
+            height: 2.2rem;
+            padding: 0;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: color-mix(in srgb, var(--ink) 55%, transparent);
+            cursor: pointer;
+            transition: color 0.18s ease, background 0.18s ease;
+        }
+
+        .toggle-password:hover {
+            color: var(--ink);
+            background: color-mix(in srgb, var(--ink) 6%, transparent);
+        }
+
+        .toggle-password svg {
+            width: 1.15rem;
+            height: 1.15rem;
+            display: block;
+        }
+
+        .toggle-password .icon-hide {
+            display: none;
+        }
+
+        .toggle-password.is-visible .icon-show {
+            display: none;
+        }
+
+        .toggle-password.is-visible .icon-hide {
+            display: block;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: var(--moss);
+            background: #fff;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--moss) 22%, transparent);
+        }
+
+        .errors {
+            margin: 0 0 1rem;
+            padding: 0.75rem 0.9rem;
+            border-radius: 10px;
+            background: color-mix(in srgb, var(--danger) 10%, white);
+            color: var(--danger);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .errors ul {
+            margin: 0;
+            padding-left: 1.1rem;
+        }
+
+        .btn-enter {
+            width: 100%;
+            margin-top: 0.35rem;
+            padding: 0.9rem 1rem;
+            border: 0;
+            border-radius: 12px;
+            background: var(--ink);
+            color: var(--foam);
+            font-family: "Figtree", sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.18s ease, background 0.18s ease;
+        }
+
+        .btn-enter:hover {
+            background: var(--moss);
+            transform: translateY(-1px);
+        }
+
+        .btn-enter:active {
+            transform: translateY(0);
+        }
+    </style>
 </head>
+<body>
+    <main class="scene">
+        <div class="aurora" aria-hidden="true">
+            <span class="blob blob-a"></span>
+            <span class="blob blob-b"></span>
+            <span class="blob blob-c"></span>
+            <span class="blob blob-d"></span>
+            <span class="blob blob-e"></span>
+            <span class="blob blob-f"></span>
+            <span class="blob blob-g"></span>
+            <span class="blob blob-h"></span>
+        </div>
+        <div class="panel">
+            <header class="brand">
+                <h1>ODA</h1>
+                <p>Tu saldo, claro y a mano.</p>
+            </header>
 
-<body class="d-flex justify-content-center align-items-center min-vh-100"
-      style="background: url('{% static 'finanzas/img/login.png' %}') repeat center fixed;
-             background-size: contain; background-color: #EED9B7;">
+            <section class="auth" aria-labelledby="login-title">
+                <h2 id="login-title">Iniciar sesión</h2>
 
-    <div class="p-4 bg-white rounded shadow" style="width: 100%; max-width: 400px;">
-        <h2 class="text-center">Iniciar sesión</h2>
-        <form method="post">
-            {% csrf_token %}
-            <div class="mb-3">
-                <label for="id_username" class="form-label text-left">Usuario</label>
-                <input type="text" name="username" class="form-control" autofocus required>
-            </div>
-            <div class="mb-3">
-                <label for="id_password" class="form-label">Contraseña</label>
-                <input type="password" name="password" class="form-control" required>
-            </div>
-            <div class="text-center">
-                <button type="submit" class="btn btn-secondary">Entrar</button>
-            </div>
-        </form>
-    </div>
+                {% if form.errors %}
+                <div class="errors" role="alert">
+                    {% if form.non_field_errors %}
+                        {{ form.non_field_errors }}
+                    {% else %}
+                        <ul>
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                {% endif %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="field">
+                        <label for="id_username">Usuario</label>
+                        <input type="text" name="username" id="id_username" autocomplete="username" autofocus required>
+                    </div>
+                    <div class="field">
+                        <label for="id_password">Contraseña</label>
+                        <div class="password-wrap">
+                            <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+                            <button type="button" class="toggle-password" id="togglePassword" aria-label="Mostrar contraseña" aria-pressed="false">
+                                <svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M3 3l18 18"/>
+                                    <path d="M10.6 10.6a3 3 0 004.2 4.2"/>
+                                    <path d="M9.9 5.2A10.7 10.7 0 0112 5c6.5 0 10 7 10 7a17.6 17.6 0 01-4.1 4.8"/>
+                                    <path d="M6.1 6.1C3.9 7.7 2 12 2 12s3.5 7 10 7a10.4 10.4 0 004.4-1"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-enter">Entrar</button>
+                </form>
+            </section>
+        </div>
+    </main>
+    <script>
+        (function () {
+            const input = document.getElementById("id_password");
+            const toggle = document.getElementById("togglePassword");
+            if (!input || !toggle) return;
+
+            toggle.addEventListener("click", function () {
+                const visible = input.type === "password";
+                input.type = visible ? "text" : "password";
+                toggle.classList.toggle("is-visible", visible);
+                toggle.setAttribute("aria-pressed", visible ? "true" : "false");
+                toggle.setAttribute("aria-label", visible ? "Ocultar contraseña" : "Mostrar contraseña");
+            });
+        })();
+    </script>
 </body>
 </html>

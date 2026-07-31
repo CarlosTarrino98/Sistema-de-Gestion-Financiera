@@ -2,50 +2,116 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Ingreso, Gasto
 from .forms import IngresoForm, GastoForm
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, PatternFill, Border, Side
+from openpyxl.styles import Alignment, PatternFill, Border, Side, Font
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import HttpResponse
+from django.utils import timezone
 from django.utils.dateparse import parse_date
-from openpyxl.styles import Font
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.units import cm
+from django.conf import settings
+from pathlib import Path
+from django.db.models import Sum
+from calendar import monthrange
+
+FILTER_SESSION_KEY = 'listado_filtros'
+
+
+def _rango_mes_actual():
+    hoy = timezone.localdate()
+    inicio = hoy.replace(day=1)
+    fin = hoy.replace(day=monthrange(hoy.year, hoy.month)[1])
+    return inicio.isoformat(), fin.isoformat()
+
+
+def _guardar_filtros(request, fecha_desde, fecha_hasta, concepto):
+    request.session[FILTER_SESSION_KEY] = {
+        'desde': fecha_desde or '',
+        'hasta': fecha_hasta or '',
+        'concepto': concepto or '',
+    }
+
+
+def _filtros_periodo(request):
+    # Limpiar filtros compartidos
+    if request.GET.get('limpiar') == '1':
+        _guardar_filtros(request, '', '', '')
+        return '', '', ''
+
+    # Si vienen filtros en la URL (formulario o paginación), se guardan y comparten
+    if any(key in request.GET for key in ('desde', 'hasta', 'concepto')):
+        fecha_desde = request.GET.get('desde') or ''
+        fecha_hasta = request.GET.get('hasta') or ''
+        concepto = (request.GET.get('concepto') or '').strip()
+        _guardar_filtros(request, fecha_desde, fecha_hasta, concepto)
+        return fecha_desde, fecha_hasta, concepto
+
+    # Reutilizar filtros de la otra sección
+    guardados = request.session.get(FILTER_SESSION_KEY)
+    if guardados is not None:
+        return (
+            guardados.get('desde', ''),
+            guardados.get('hasta', ''),
+            guardados.get('concepto', ''),
+        )
+
+    # Primera visita: mes actual
+    fecha_desde, fecha_hasta = _rango_mes_actual()
+    _guardar_filtros(request, fecha_desde, fecha_hasta, '')
+    return fecha_desde, fecha_hasta, ''
+
+
+def _aplicar_filtros(queryset, fecha_desde, fecha_hasta, concepto):
+    if fecha_desde:
+        queryset = queryset.filter(fecha__gte=fecha_desde)
+    if fecha_hasta:
+        queryset = queryset.filter(fecha__lte=fecha_hasta)
+    if concepto:
+        queryset = queryset.filter(concepto__icontains=concepto)
+    return queryset
+
 
 @login_required
 def lista_ingresos(request):
     ingresos = Ingreso.objects.filter(user=request.user).order_by('-fecha')
+    fecha_desde, fecha_hasta, concepto = _filtros_periodo(request)
+    ingresos = _aplicar_filtros(ingresos, fecha_desde, fecha_hasta, concepto)
 
-    fecha_desde = request.GET.get('desde')
-    fecha_hasta = request.GET.get('hasta')
-
-    if fecha_desde:
-        ingresos = ingresos.filter(fecha__gte=fecha_desde)
-    if fecha_hasta:
-        ingresos = ingresos.filter(fecha__lte=fecha_hasta)
+    total_filtrado = ingresos.aggregate(total=Sum('cantidad'))['total'] or 0
+    page_obj = Paginator(ingresos, 20).get_page(request.GET.get('page'))
 
     return render(request, 'finanzas/lista_ingresos.html', {
-        'ingresos': ingresos,
+        'ingresos': page_obj,
+        'page_obj': page_obj,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
+        'concepto': concepto,
+        'total_filtrado': total_filtrado,
     })
+
 
 @login_required
 def lista_gastos(request):
     gastos = Gasto.objects.filter(user=request.user).order_by('-fecha')
+    fecha_desde, fecha_hasta, concepto = _filtros_periodo(request)
+    gastos = _aplicar_filtros(gastos, fecha_desde, fecha_hasta, concepto)
 
-    fecha_desde = request.GET.get('desde')
-    fecha_hasta = request.GET.get('hasta')
-
-    if fecha_desde:
-        gastos = gastos.filter(fecha__gte=fecha_desde)
-    if fecha_hasta:
-        gastos = gastos.filter(fecha__lte=fecha_hasta)
+    total_filtrado = gastos.aggregate(total=Sum('cantidad'))['total'] or 0
+    page_obj = Paginator(gastos, 20).get_page(request.GET.get('page'))
 
     return render(request, 'finanzas/lista_gastos.html', {
-        'gastos': gastos,
+        'gastos': page_obj,
+        'page_obj': page_obj,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
+        'concepto': concepto,
+        'total_filtrado': total_filtrado,
     })
 
 @login_required
@@ -56,10 +122,11 @@ def añadir_ingreso(request):
             ingreso = form.save(commit=False)
             ingreso.user = request.user
             ingreso.save()
+            messages.success(request, 'Ingreso guardado correctamente.')
             return redirect('lista_ingresos')
-    else:
-        form = IngresoForm()
-    return render(request, 'finanzas/form_ingreso.html', {'form': form})
+        messages.error(request, 'No se pudo guardar el ingreso. Revisa los datos.')
+        return redirect('lista_ingresos')
+    return redirect('lista_ingresos')
 
 @login_required
 def añadir_gasto(request):
@@ -69,10 +136,11 @@ def añadir_gasto(request):
             gasto = form.save(commit=False)
             gasto.user = request.user
             gasto.save()
+            messages.success(request, 'Gasto guardado correctamente.')
             return redirect('lista_gastos')
-    else:
-        form = GastoForm()
-    return render(request, 'finanzas/form_gasto.html', {'form': form})
+        messages.error(request, 'No se pudo guardar el gasto. Revisa los datos.')
+        return redirect('lista_gastos')
+    return redirect('lista_gastos')
 
 @login_required
 def editar_ingreso(request, pk):
@@ -83,10 +151,11 @@ def editar_ingreso(request, pk):
             ingreso = form.save(commit=False)
             ingreso.user = request.user
             ingreso.save()
+            messages.success(request, 'Ingreso actualizado correctamente.')
             return redirect('lista_ingresos')
-    else:
-        form = IngresoForm(instance=ingreso)
-    return render(request, 'finanzas/form_ingreso.html', {'form': form})
+        messages.error(request, 'No se pudo actualizar el ingreso. Revisa los datos.')
+        return redirect('lista_ingresos')
+    return redirect('lista_ingresos')
 
 @login_required
 def editar_gasto(request, pk):
@@ -97,10 +166,11 @@ def editar_gasto(request, pk):
             gasto = form.save(commit=False)
             gasto.user = request.user
             gasto.save()
+            messages.success(request, 'Gasto actualizado correctamente.')
             return redirect('lista_gastos')
-    else:
-        form = GastoForm(instance=gasto)
-    return render(request, 'finanzas/form_gasto.html', {'form': form})
+        messages.error(request, 'No se pudo actualizar el gasto. Revisa los datos.')
+        return redirect('lista_gastos')
+    return redirect('lista_gastos')
 
 @login_required
 def eliminar_ingreso(request, pk):
@@ -120,7 +190,6 @@ def generar_seguimiento(request):
     fecha_fin = parse_date(request.GET.get('fecha_fin'))
     formato = request.GET.get('formato')  # 'excel' o 'pdf'
 
-    # Asegurarse de que sean objetos date
     if isinstance(fecha_inicio, str):
         fecha_inicio = parse_date(fecha_inicio)
     if isinstance(fecha_fin, str):
@@ -129,14 +198,17 @@ def generar_seguimiento(request):
     if not fecha_inicio or not fecha_fin:
         return HttpResponse("Fechas inválidas", status=400)
 
-    ingresos = Ingreso.objects.filter(user=request.user, fecha__range=(fecha_inicio, fecha_fin))
-    gastos = Gasto.objects.filter(user=request.user, fecha__range=(fecha_inicio, fecha_fin))
+    ingresos = Ingreso.objects.filter(user=request.user, fecha__range=(fecha_inicio, fecha_fin)).order_by('fecha')
+    gastos = Gasto.objects.filter(user=request.user, fecha__range=(fecha_inicio, fecha_fin)).order_by('fecha')
 
     total_ingresos = sum(i.cantidad for i in ingresos)
     total_gastos = sum(g.cantidad for g in gastos)
-    total_saldo = total_ingresos - total_gastos
+    saldo_periodo = total_ingresos - total_gastos
 
-    # Formatear fechas para el nombre del archivo
+    total_ingresos_global = Ingreso.objects.filter(user=request.user).aggregate(Sum('cantidad'))['cantidad__sum'] or 0
+    total_gastos_global = Gasto.objects.filter(user=request.user).aggregate(Sum('cantidad'))['cantidad__sum'] or 0
+    saldo_actual = total_ingresos_global - total_gastos_global
+
     fecha_ini_str = fecha_inicio.strftime('%d-%m-%Y')
     fecha_fin_str = fecha_fin.strftime('%d-%m-%Y')
     nombre_archivo = f"ODA - {fecha_ini_str} - {fecha_fin_str}"
@@ -146,61 +218,76 @@ def generar_seguimiento(request):
         ws_ingresos = wb.active
         ws_ingresos.title = "Ingresos"
 
-        # Estilos
-        cabecera_fill = PatternFill(start_color="BDD7EE", end_color="BDD7EE", fill_type="solid")
+        cabecera_fill = PatternFill(start_color="13241E", end_color="13241E", fill_type="solid")
+        header_font = Font(bold=True, color="F4F8F5")
         bold_font = Font(bold=True)
-        center_align = Alignment(horizontal="center")
+        center_align = Alignment(horizontal="center", vertical="center")
         thin_border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin'),
+            left=Side(style='thin', color='C8D5CE'),
+            right=Side(style='thin', color='C8D5CE'),
+            top=Side(style='thin', color='C8D5CE'),
+            bottom=Side(style='thin', color='C8D5CE'),
         )
 
-        def estilizar_fila(celdas):
-            for cell in celdas:
-                cell.font = bold_font
+        def estilizar_cabecera(ws):
+            for cell in ws[1]:
+                cell.font = header_font
                 cell.fill = cabecera_fill
                 cell.alignment = center_align
                 cell.border = thin_border
 
-        # Hoja Ingresos
-        ws_ingresos.append(["Fecha", "Concepto", "Cantidad"])
-        estilizar_fila(ws_ingresos[1])
+        def estilizar_cuerpo(ws):
+            for row in ws.iter_rows(min_row=2):
+                for cell in row:
+                    cell.border = thin_border
+
+        ws_ingresos.append(["Fecha", "Concepto", "Cantidad (€)"])
+        estilizar_cabecera(ws_ingresos)
         for ingreso in ingresos:
             ws_ingresos.append([
                 ingreso.fecha.strftime('%d/%m/%Y'),
                 ingreso.concepto,
-                ingreso.cantidad
+                float(ingreso.cantidad),
             ])
-        for row in ws_ingresos.iter_rows(min_row=2):
-            for cell in row:
-                cell.border = thin_border
+        estilizar_cuerpo(ws_ingresos)
+        ws_ingresos.column_dimensions['A'].width = 14
+        ws_ingresos.column_dimensions['B'].width = 45
+        ws_ingresos.column_dimensions['C'].width = 14
 
-        # Hoja Gastos
         ws_gastos = wb.create_sheet("Gastos")
-        ws_gastos.append(["Fecha", "Concepto", "Cantidad"])
-        estilizar_fila(ws_gastos[1])
+        ws_gastos.append(["Fecha", "Concepto", "Cantidad (€)"])
+        estilizar_cabecera(ws_gastos)
         for gasto in gastos:
             ws_gastos.append([
                 gasto.fecha.strftime('%d/%m/%Y'),
                 gasto.concepto,
-                gasto.cantidad
+                float(gasto.cantidad),
             ])
-        for row in ws_gastos.iter_rows(min_row=2):
-            for cell in row:
-                cell.border = thin_border
+        estilizar_cuerpo(ws_gastos)
+        ws_gastos.column_dimensions['A'].width = 14
+        ws_gastos.column_dimensions['B'].width = 45
+        ws_gastos.column_dimensions['C'].width = 14
 
-        # Hoja Totales
-        ws_totales = wb.create_sheet("Totales")
-        ws_totales.append(["Resumen", "Cantidad (€)"])
-        estilizar_fila(ws_totales[1])
-        ws_totales.append(["Total Ingresos", total_ingresos])
-        ws_totales.append(["Total Gastos", total_gastos])
-        ws_totales.append(["Saldo", total_saldo])
-        for row in ws_totales.iter_rows(min_row=2):
+        ws_totales = wb.create_sheet("Resumen", 0)
+        ws_totales.append(["Concepto", "Importe (€)"])
+        estilizar_cabecera(ws_totales)
+        ws_totales.append(["Total ingresos (periodo)", float(total_ingresos)])
+        ws_totales.append(["Total gastos (periodo)", float(total_gastos)])
+        ws_totales.append(["Saldo del periodo", float(saldo_periodo)])
+        ws_totales.append(["Saldo actual", float(saldo_actual)])
+        ws_totales.append(["", ""])
+        ws_totales.append([
+            "Periodo",
+            f"{fecha_inicio.strftime('%d/%m/%Y')} — {fecha_fin.strftime('%d/%m/%Y')}",
+        ])
+        estilizar_cuerpo(ws_totales)
+        for row in ws_totales.iter_rows(min_row=2, max_row=5, min_col=1, max_col=1):
             for cell in row:
-                cell.border = thin_border
+                cell.font = bold_font
+        ws_totales['A7'].font = bold_font
+        ws_totales['B7'].alignment = Alignment(horizontal='right', vertical='center')
+        ws_totales.column_dimensions['A'].width = 28
+        ws_totales.column_dimensions['B'].width = 28
 
         response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         response['Content-Disposition'] = f'attachment; filename={nombre_archivo}.xlsx'
@@ -211,56 +298,206 @@ def generar_seguimiento(request):
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}.pdf"'
 
-        doc = SimpleDocTemplate(response, pagesize=A4)
+        ink = colors.HexColor('#13241e')
+        moss = colors.HexColor('#2a5c48')
+        foam = colors.HexColor('#f4f8f5')
+        positive = colors.HexColor('#1f6b4a')
+        negative = colors.HexColor('#9b3a2f')
+        line = colors.HexColor('#c8d5ce')
+        row_alt = colors.HexColor('#e8f0eb')
+
+        doc = SimpleDocTemplate(
+            response,
+            pagesize=A4,
+            leftMargin=1.6 * cm,
+            rightMargin=1.6 * cm,
+            topMargin=1.6 * cm,
+            bottomMargin=1.6 * cm,
+        )
         styles = getSampleStyleSheet()
-        elements = []
+        style_brand = ParagraphStyle(
+            'OdaBrand',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=24,
+            leading=28,
+            textColor=ink,
+            alignment=TA_LEFT,
+            spaceBefore=0,
+            spaceAfter=0,
+        )
+        style_subtitle = ParagraphStyle(
+            'OdaSubtitle',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=11,
+            leading=14,
+            textColor=moss,
+            alignment=TA_CENTER,
+            spaceBefore=10,
+            spaceAfter=6,
+        )
+        style_meta = ParagraphStyle(
+            'OdaMeta',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=9,
+            leading=12,
+            textColor=ink,
+            alignment=TA_CENTER,
+            spaceBefore=0,
+            spaceAfter=12,
+        )
+        style_section = ParagraphStyle(
+            'OdaSection',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=12,
+            textColor=ink,
+            spaceBefore=8,
+            spaceAfter=8,
+        )
+        style_cell = ParagraphStyle(
+            'OdaCell',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=9,
+            textColor=ink,
+            leading=12,
+        )
+        style_empty = ParagraphStyle(
+            'OdaEmpty',
+            parent=styles['Normal'],
+            fontName='Helvetica-Oblique',
+            fontSize=9,
+            textColor=colors.HexColor('#6b7f75'),
+            alignment=TA_CENTER,
+        )
 
-        elements.append(Paragraph("ODA - Resumen de seguimiento", styles['Title']))
-        elements.append(Spacer(1, 12))
-        elements.append(Paragraph(f"<b>Desde:</b> {fecha_inicio.strftime('%d/%m/%Y')}", styles['Normal']))
-        elements.append(Paragraph(f"<b>Hasta:</b> {fecha_fin.strftime('%d/%m/%Y')}", styles['Normal']))
-        elements.append(Spacer(1, 12))
-        elements.append(Paragraph(f"<b>Total Ingresos:</b> {total_ingresos:.2f} €", styles['Normal']))
-        elements.append(Paragraph(f"<b>Total Gastos:</b> {total_gastos:.2f} €", styles['Normal']))
-        elements.append(Paragraph(f"<b>Saldo:</b> {total_saldo:.2f} €", styles['Normal']))
-        elements.append(Spacer(1, 24))
+        def money_text(value):
+            return f"{float(value):,.2f} €".replace(',', 'X').replace('.', ',').replace('X', '.')
 
-        # Tabla de ingresos
-        elements.append(Paragraph("Listado de Ingresos", styles['Heading2']))
-        data_ingresos = [["Fecha", "Concepto", "Cantidad (€)"]]
-        for ingreso in ingresos:
-            data_ingresos.append([
-                ingreso.fecha.strftime('%d/%m/%Y'),
-                Paragraph(ingreso.concepto, styles['Normal']),
-                f"{ingreso.cantidad:.2f}"
-            ])
-        table_ingresos = Table(data_ingresos, colWidths=[80, 300, 80], hAlign='LEFT')
-        table_ingresos.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP')
+        def build_movement_table(rows, header_color):
+            data = [[
+                Paragraph('Fecha', style_cell),
+                Paragraph('Concepto', style_cell),
+                Paragraph('Cantidad', style_cell),
+            ]]
+            rows = list(rows)
+            if rows:
+                for item in rows:
+                    signo = '+' if header_color == positive else '−'
+                    data.append([
+                        Paragraph(item.fecha.strftime('%d/%m/%Y'), style_cell),
+                        Paragraph(item.concepto.replace('\n', '<br/>'), style_cell),
+                        Paragraph(f"{signo}{money_text(item.cantidad)}", style_cell),
+                    ])
+            else:
+                data.append([
+                    Paragraph('—', style_empty),
+                    Paragraph('Sin movimientos en este periodo', style_empty),
+                    Paragraph('—', style_empty),
+                ])
+
+            table = Table(data, colWidths=[2.4 * cm, 11.2 * cm, 3.2 * cm], hAlign='CENTER')
+            style_commands = [
+                ('BACKGROUND', (0, 0), (-1, 0), header_color),
+                ('TEXTCOLOR', (0, 0), (-1, 0), foam),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 7),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+                ('BOX', (0, 0), (-1, -1), 0.6, line),
+                ('LINEBELOW', (0, 0), (-1, -2), 0.4, line),
+            ]
+            for i in range(1, len(data)):
+                if i % 2 == 0:
+                    style_commands.append(('BACKGROUND', (0, i), (-1, i), row_alt))
+            table.setStyle(TableStyle(style_commands))
+            return table, len(rows)
+
+        saldo_periodo_color = '#1f6b4a' if saldo_periodo >= 0 else '#9b3a2f'
+        saldo_actual_color = '#1f6b4a' if saldo_actual >= 0 else '#9b3a2f'
+        card_style = ParagraphStyle('OdaCard', parent=styles['Normal'], alignment=TA_CENTER, leading=14)
+
+        summary = Table(
+            [[
+                Paragraph(
+                    f'<font size="8" color="#5a6f66">INGRESOS PERIODO</font><br/>'
+                    f'<font size="12" color="#1f6b4a"><b>{money_text(total_ingresos)}</b></font>',
+                    card_style,
+                ),
+                Paragraph(
+                    f'<font size="8" color="#5a6f66">GASTOS PERIODO</font><br/>'
+                    f'<font size="12" color="#9b3a2f"><b>{money_text(total_gastos)}</b></font>',
+                    card_style,
+                ),
+                Paragraph(
+                    f'<font size="8" color="#5a6f66">SALDO PERIODO</font><br/>'
+                    f'<font size="12" color="{saldo_periodo_color}"><b>{money_text(saldo_periodo)}</b></font>',
+                    card_style,
+                ),
+                Paragraph(
+                    f'<font size="8" color="#5a6f66">SALDO ACTUAL</font><br/>'
+                    f'<font size="12" color="{saldo_actual_color}"><b>{money_text(saldo_actual)}</b></font>',
+                    card_style,
+                ),
+            ]],
+            colWidths=[4.2 * cm, 4.2 * cm, 4.2 * cm, 4.2 * cm],
+            hAlign='CENTER',
+        )
+        summary.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), foam),
+            ('BOX', (0, 0), (-1, 0), 0.8, line),
+            ('INNERGRID', (0, 0), (-1, 0), 0.5, line),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
         ]))
-        elements.append(table_ingresos)
-        elements.append(Spacer(1, 24))
 
-        # Tabla de gastos
-        elements.append(Paragraph("Listado de Gastos", styles['Heading2']))
-        data_gastos = [["Fecha", "Concepto", "Cantidad (€)"]]
-        for gasto in gastos:
-            data_gastos.append([
-                gasto.fecha.strftime('%d/%m/%Y'),
-                Paragraph(gasto.concepto, styles['Normal']),
-                f"{gasto.cantidad:.2f}"
-            ])
-        table_gastos = Table(data_gastos, colWidths=[80, 300, 80], hAlign='LEFT')
-        table_gastos.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.salmon),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP')
+        tabla_ingresos, n_ingresos = build_movement_table(ingresos, positive)
+        tabla_gastos, n_gastos = build_movement_table(gastos, negative)
+
+        logo_path = Path(settings.BASE_DIR) / 'finanzas' / 'static' / 'finanzas' / 'img' / 'favicon.png'
+        logo = RLImage(str(logo_path), width=1.15 * cm, height=1.15 * cm)
+        header_brand = Table(
+            [[logo, Paragraph('ODA', style_brand)]],
+            colWidths=[1.4 * cm, 3.2 * cm],
+            hAlign='CENTER',
+        )
+        header_brand.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
         ]))
-        elements.append(table_gastos)
+
+        elements = [
+            header_brand,
+            Spacer(1, 8),
+            Paragraph('Resumen de seguimiento', style_subtitle),
+            Paragraph(
+                f"Periodo: <b>{fecha_inicio.strftime('%d/%m/%Y')}</b> — <b>{fecha_fin.strftime('%d/%m/%Y')}</b>",
+                style_meta,
+            ),
+            HRFlowable(width='100%', thickness=1, color=moss, spaceBefore=4, spaceAfter=14),
+            summary,
+            Spacer(1, 18),
+            Paragraph(f'Ingresos ({n_ingresos})', style_section),
+            tabla_ingresos,
+            Spacer(1, 16),
+            Paragraph(f'Gastos ({n_gastos})', style_section),
+            tabla_gastos,
+        ]
 
         doc.build(elements)
         return response

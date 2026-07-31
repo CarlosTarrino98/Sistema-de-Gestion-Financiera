@@ -1,104 +1,1526 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gestor de gastos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}ODA{% endblock %}</title>
+    <link rel="icon" href="{% static 'finanzas/img/favicon.svg' %}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{% static 'finanzas/img/favicon.svg' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    {% load static %}
+    <style>
+        :root {
+            --ink: #13241e;
+            --moss: #2a5c48;
+            --sage: #7f9f8c;
+            --mist: #d9e5de;
+            --foam: #f4f8f5;
+            --panel: rgba(244, 248, 245, 0.88);
+            --line: rgba(19, 36, 30, 0.12);
+            --positive: #1f6b4a;
+            --negative: #9b3a2f;
+            --radius: 16px;
+            --shadow: 0 10px 30px rgba(19, 36, 30, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Figtree", sans-serif;
+            color: var(--ink);
+            background: #6b9688;
+        }
+
+        .app-shell {
+            position: relative;
+            min-height: 100vh;
+            overflow-x: clip;
+            background: linear-gradient(160deg, #7fa99a 0%, #6b9688 45%, #5a8578 100%);
+        }
+
+        .aurora {
+            position: fixed;
+            inset: -20%;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(72px);
+            will-change: transform;
+            mix-blend-mode: multiply;
+            opacity: 0.78;
+        }
+
+        .blob-a {
+            width: min(55vw, 480px);
+            height: min(55vw, 480px);
+            top: 0;
+            left: -8%;
+            background: #5f9a8a;
+            animation: float-a 22s ease-in-out infinite;
+        }
+
+        .blob-b {
+            width: min(50vw, 440px);
+            height: min(50vw, 440px);
+            top: 10%;
+            right: -10%;
+            background: #6a8f9a;
+            animation: float-b 26s ease-in-out infinite;
+        }
+
+        .blob-c {
+            width: min(60vw, 520px);
+            height: min(60vw, 520px);
+            bottom: -10%;
+            left: 25%;
+            background: #4f8578;
+            animation: float-c 24s ease-in-out infinite;
+        }
+
+        .blob-d {
+            width: min(40vw, 360px);
+            height: min(40vw, 360px);
+            top: 45%;
+            left: 40%;
+            background: #5b8a96;
+            animation: float-d 18s ease-in-out infinite;
+        }
+
+        @keyframes float-a {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(18vw, 20vh) scale(1.12); }
+        }
+
+        @keyframes float-b {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-20vw, 24vh) scale(1.1); }
+        }
+
+        @keyframes float-c {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-14vw, -18vh) scale(1.15); }
+        }
+
+        @keyframes float-d {
+            0%, 100% { transform: translate(0, 0) scale(0.95); }
+            50% { transform: translate(-12vw, -10vh) scale(1.2); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .blob { animation: none; }
+        }
+
+        /* —— Header —— */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            width: 100%;
+            backdrop-filter: blur(16px);
+            background: rgba(244, 248, 245, 0.82);
+            border-bottom: 1px solid var(--line);
+            box-shadow: 0 4px 20px rgba(19, 36, 30, 0.06);
+        }
+
+        .topbar-inner {
+            width: 100%;
+            margin: 0;
+            padding: 0.9rem 1.25rem 1rem;
+            box-sizing: border-box;
+        }
+
+        .topbar-main {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                "brand"
+                "saldo"
+                "nav";
+            align-items: center;
+            column-gap: 0.75rem;
+            row-gap: 0.85rem;
+            width: 100%;
+        }
+
+        .brand {
+            grid-area: brand;
+            justify-self: start;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-family: "Bricolage Grotesque", sans-serif;
+            font-weight: 800;
+            font-size: clamp(1.6rem, 5vw, 2rem);
+            letter-spacing: -0.04em;
+            line-height: 1;
+            color: var(--ink);
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            width: 1.85rem;
+            height: 1.85rem;
+            flex-shrink: 0;
+            border-radius: 0.45rem;
+            display: block;
+        }
+
+        .brand:hover { color: var(--moss); }
+
+        .saldo-block {
+            grid-area: saldo;
+            text-align: center;
+            padding: 0.15rem 0;
+            justify-self: center;
+        }
+
+        .saldo-label {
+            margin: 0;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: color-mix(in srgb, var(--ink) 55%, transparent);
+        }
+
+        .saldo-value {
+            margin: 0.15rem 0 0;
+            font-family: "Bricolage Grotesque", sans-serif;
+            font-weight: 800;
+            font-size: clamp(1.85rem, 7vw, 2.6rem);
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+        }
+
+        .saldo-value.is-positive { color: var(--positive); }
+        .saldo-value.is-negative { color: var(--negative); }
+        .saldo-value.is-zero { color: var(--ink); }
+
+        .topbar-actions {
+            display: contents;
+        }
+
+        .nav-actions {
+            grid-area: nav;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.45rem;
+            width: 100%;
+        }
+
+        .nav-link-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            width: 100%;
+            min-height: 2.65rem;
+            padding: 0.55rem 0.45rem;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.65);
+            color: var(--ink);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .nav-link-btn i {
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .nav-link-btn:hover {
+            background: #fff;
+            color: var(--ink);
+            transform: translateY(-1px);
+        }
+
+        .nav-link-btn.is-active {
+            background: var(--ink);
+            border-color: var(--ink);
+            color: var(--foam);
+        }
+
+        .nav-link-btn.is-active:hover {
+            background: var(--moss);
+            border-color: var(--moss);
+            color: var(--foam);
+        }
+
+        .nav-link-btn .nav-text-short,
+        .nav-link-btn .nav-text-full {
+            display: none;
+        }
+
+        /* —— Main content —— */
+        .content-wrap {
+            width: min(1480px, calc(100% - 1.5rem));
+            margin: 0 auto;
+            padding: 1.25rem 0 2.5rem;
+        }
+
+        .content-panel {
+            background: var(--panel);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.15rem 1rem 1.35rem;
+        }
+
+        /* Bootstrap / shared form controls */
+        .content-panel .form-control,
+        .content-panel .form-select,
+        .modal .form-control {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--ink);
+            min-height: 2.6rem;
+            box-shadow: none;
+        }
+
+        .content-panel .form-control:focus,
+        .modal .form-control:focus {
+            border-color: var(--moss);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--moss) 22%, transparent);
+        }
+
+        .content-panel .form-label,
+        .modal .form-label {
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: color-mix(in srgb, var(--ink) 75%, transparent);
+        }
+
+        .content-panel .btn,
+        .modal .btn {
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 0.55rem 1rem;
+        }
+
+        .content-panel .btn-success {
+            background: var(--positive);
+            border-color: var(--positive);
+        }
+
+        .content-panel .btn-success:hover {
+            background: var(--moss);
+            border-color: var(--moss);
+        }
+
+        .content-panel .btn-danger {
+            background: var(--negative);
+            border-color: var(--negative);
+        }
+
+        .content-panel .btn-secondary {
+            background: var(--ink);
+            border-color: var(--ink);
+            color: var(--foam);
+        }
+
+        .content-panel .btn-secondary:hover {
+            background: var(--moss);
+            border-color: var(--moss);
+            color: var(--foam);
+        }
+
+        .content-panel .text-success { color: var(--positive) !important; }
+        .content-panel .text-danger { color: var(--negative) !important; }
+
+        .content-panel h2 {
+            font-family: "Bricolage Grotesque", sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        /* —— List toolbar + table —— */
+        .list-toolbar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.85rem;
+            margin-bottom: 1.15rem;
+            align-items: center;
+        }
+
+        .filter-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            grid-column: 1;
+            grid-row: 1;
+            min-height: 2.65rem;
+            padding: 0.55rem 0.9rem;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.75);
+            color: var(--ink);
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .filter-toggle-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .filter-chevron {
+            transition: transform 0.2s ease;
+        }
+
+        .filter-toggle[aria-expanded="true"] .filter-chevron {
+            transform: rotate(180deg);
+        }
+
+        .filter-form {
+            display: none;
+            flex-wrap: wrap;
+            align-items: end;
+            gap: 0.65rem;
+            width: 100%;
+            grid-column: 1 / -1;
+            grid-row: 2;
+        }
+
+        .filter-form.is-open {
+            display: flex;
+        }
+
+        .filter-field {
+            flex: 1 1 140px;
+            min-width: 0;
+        }
+
+        .filter-field-date {
+            flex: 0 0 auto;
+            width: auto;
+        }
+
+        .filter-field-date .form-control {
+            width: 10.25rem;
+            max-width: 100%;
+        }
+
+        .filter-field-concepto {
+            flex: 1 1 180px;
+        }
+
+        .filter-field label {
+            display: block;
+            margin-bottom: 0.35rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: color-mix(in srgb, var(--ink) 70%, transparent);
+        }
+
+        .filter-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            align-items: end;
+        }
+
+        @media (max-width: 639px) {
+            .filter-field-date {
+                flex: 1 1 calc(50% - 0.35rem);
+                max-width: calc(50% - 0.35rem);
+            }
+
+            .filter-field-date .form-control {
+                width: 100%;
+            }
+
+            .filter-field-concepto {
+                flex: 1 1 100%;
+            }
+
+            .filter-actions {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        .btn-filter,
+        .btn-add,
+        .btn-clear {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            min-height: 2.6rem;
+            padding: 0.55rem 1rem;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.92rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .btn-filter {
+            background: var(--ink);
+            color: var(--foam);
+        }
+
+        .btn-filter:hover {
+            background: var(--moss);
+            color: var(--foam);
+            transform: translateY(-1px);
+        }
+
+        .btn-clear {
+            background: rgba(255, 255, 255, 0.7);
+            border-color: var(--line);
+            color: var(--ink);
+        }
+
+        .btn-clear:hover {
+            background: #fff;
+            color: var(--ink);
+            transform: translateY(-1px);
+        }
+
+        .btn-add {
+            grid-column: 2;
+            grid-row: 1;
+            justify-self: stretch;
+            background: var(--positive);
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        button.btn-add {
+            font: inherit;
+        }
+
+        .btn-add.is-gasto {
+            background: var(--negative);
+        }
+
+        .btn-add:hover {
+            filter: brightness(0.95);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .toolbar-bottom {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .list-meta {
+            margin: 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: color-mix(in srgb, var(--ink) 60%, transparent);
+        }
+
+        .list-total {
+            margin: 0;
+            font-family: "Bricolage Grotesque", sans-serif;
+            font-size: 1.15rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .data-table-wrap {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.55);
+        }
+
+        .data-table {
+            width: 100%;
+            margin: 0;
+            border-collapse: collapse;
+            min-width: 640px;
+        }
+
+        .data-table thead th {
+            padding: 0.85rem 1rem;
+            background: var(--ink);
+            color: var(--foam);
+            font-family: "Figtree", sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            text-align: center;
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .data-table thead th.col-fecha {
+            text-align: left;
+        }
+
+        .data-table tbody td {
+            padding: 0.9rem 1rem;
+            border-top: 1px solid var(--line);
+            vertical-align: middle;
+            background: rgba(255, 255, 255, 0.35);
+        }
+
+        .data-table tbody tr:nth-child(even) td {
+            background: color-mix(in srgb, var(--moss) 10%, white);
+        }
+
+        .data-table tbody tr:hover td {
+            background: color-mix(in srgb, var(--moss) 16%, white);
+        }
+
+        .data-table .col-fecha {
+            width: 8.5rem;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+            text-align: left;
+        }
+
+        .data-table tbody .col-fecha {
+            color: color-mix(in srgb, var(--ink) 75%, transparent);
+        }
+
+        .data-table .col-cantidad {
+            width: 8rem;
+            white-space: nowrap;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .data-table tbody .col-cantidad {
+            font-family: "Bricolage Grotesque", sans-serif;
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .data-table .col-concepto {
+            text-align: center;
+            max-width: 28rem;
+        }
+
+        .data-table tbody .col-concepto .concepto-text {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: break-word;
+            line-height: 1.35;
+            text-align: center;
+        }
+
+        .data-table .col-acciones {
+            width: 9.5rem;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .data-table thead .col-acciones {
+            text-align: center;
+        }
+
+        .amount-in { color: var(--positive); }
+        .amount-out { color: var(--negative); }
+
+        .row-actions {
+            display: inline-flex;
+            gap: 0.4rem;
+            justify-content: center;
+        }
+
+        .icon-btn {
+            display: inline-grid;
+            place-items: center;
+            width: 2.15rem;
+            height: 2.15rem;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.85);
+            color: var(--ink);
+            text-decoration: none;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+        }
+
+        .icon-btn:hover {
+            transform: translateY(-1px);
+            color: var(--ink);
+        }
+
+        .icon-btn.is-view:hover {
+            border-color: #3d6e8c;
+            background: color-mix(in srgb, #3d6e8c 12%, white);
+            color: #3d6e8c;
+        }
+
+        .icon-btn.is-edit:hover {
+            border-color: var(--moss);
+            background: color-mix(in srgb, var(--moss) 12%, white);
+            color: var(--moss);
+        }
+
+        .icon-btn.is-delete:hover {
+            border-color: var(--negative);
+            background: color-mix(in srgb, var(--negative) 10%, white);
+            color: var(--negative);
+        }
+
+        .detail-list {
+            display: grid;
+            gap: 0.85rem;
+            margin: 0;
+        }
+
+        .detail-list div {
+            display: grid;
+            gap: 0.2rem;
+        }
+
+        .detail-list dt {
+            margin: 0;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: color-mix(in srgb, var(--ink) 55%, transparent);
+        }
+
+        .detail-list dd {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--ink);
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .detail-list dd.amount-in,
+        .detail-list dd.amount-out {
+            font-family: "Bricolage Grotesque", sans-serif;
+            font-size: 1.35rem;
+            font-weight: 800;
+        }
+
+        .detail-list dd.amount-in {
+            color: var(--positive);
+        }
+
+        .detail-list dd.amount-out {
+            color: var(--negative);
+        }
+
+        .view-modal-footer {
+            margin-top: 1.75rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--line);
+        }
+
+        .detail-badge {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .detail-badge.is-ingreso {
+            background: color-mix(in srgb, var(--positive) 14%, white);
+            color: var(--positive);
+        }
+
+        .detail-badge.is-gasto {
+            background: color-mix(in srgb, var(--negative) 12%, white);
+            color: var(--negative);
+        }
+
+        .empty-state {
+            padding: 2.5rem 1.25rem;
+            text-align: center;
+            color: color-mix(in srgb, var(--ink) 58%, transparent);
+        }
+
+        .empty-state i {
+            display: block;
+            font-size: 1.8rem;
+            margin-bottom: 0.55rem;
+            color: var(--sage);
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .pagination-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 1.15rem;
+            flex-wrap: wrap;
+        }
+
+        .page-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            min-height: 2.4rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.75);
+            color: var(--ink);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+
+        .page-btn:hover:not(.is-disabled) {
+            background: #fff;
+            transform: translateY(-1px);
+            color: var(--ink);
+        }
+
+        .page-btn.is-disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .page-status {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: color-mix(in srgb, var(--ink) 70%, transparent);
+        }
+
+        /* —— Modal —— */
+        .modal-content {
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            overflow: hidden;
+            background: var(--foam);
+            box-shadow: 0 20px 50px rgba(19, 36, 30, 0.18);
+        }
+
+        .modal-header {
+            background: var(--ink) !important;
+            color: var(--foam) !important;
+            border-bottom: 0;
+            padding: 1rem 1.15rem;
+        }
+
+        .modal-title {
+            font-family: "Bricolage Grotesque", sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .modal-header .btn-close {
+            filter: invert(1);
+            opacity: 0.85;
+        }
+
+        .modal-body {
+            padding: 1.25rem 1.15rem 0.5rem;
+        }
+
+        .modal-footer {
+            border-top: 0;
+            padding: 0.5rem 0 0;
+            justify-content: stretch;
+        }
+
+        .modal-footer .btn {
+            width: 100%;
+            background: var(--ink);
+            border-color: var(--ink);
+            color: var(--foam);
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+        }
+
+        .modal-footer .btn:hover {
+            background: var(--moss);
+            border-color: var(--moss);
+            color: var(--foam);
+        }
+
+        .modal-footer.is-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+            padding-top: 1rem;
+        }
+
+        .modal-footer .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--line);
+            color: var(--ink);
+        }
+
+        .modal-footer .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: color-mix(in srgb, var(--ink) 28%, transparent);
+            color: var(--ink);
+        }
+
+        .modal-footer .btn-danger-solid {
+            background: var(--negative);
+            border-color: var(--negative);
+            color: var(--foam);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-footer .btn-danger-solid:hover {
+            background: color-mix(in srgb, var(--negative) 85%, black);
+            border-color: color-mix(in srgb, var(--negative) 85%, black);
+            color: var(--foam);
+        }
+
+        .modal-footer .btn-success-solid {
+            background: var(--positive);
+            border-color: var(--positive);
+            color: var(--foam);
+        }
+
+        .modal-footer .btn-success-solid:hover {
+            background: var(--moss);
+            border-color: var(--moss);
+            color: var(--foam);
+        }
+
+        .modal-footer.is-split .btn {
+            width: 100%;
+        }
+
+        #movementForm textarea.form-control {
+            min-height: 6rem;
+            resize: vertical;
+        }
+
+        .flash-messages {
+            display: grid;
+            gap: 0.55rem;
+            margin-bottom: 1rem;
+        }
+
+        .flash-message {
+            padding: 0.75rem 0.95rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+
+        .flash-message.is-error {
+            background: color-mix(in srgb, var(--danger, #9b3a2f) 12%, white);
+            color: var(--negative);
+            border: 1px solid color-mix(in srgb, var(--negative) 25%, transparent);
+        }
+
+        .flash-message.is-success {
+            background: color-mix(in srgb, var(--positive) 12%, white);
+            color: var(--positive);
+            border: 1px solid color-mix(in srgb, var(--positive) 25%, transparent);
+        }
+
+        .confirm-text {
+            margin: 0;
+            font-size: 1.02rem;
+            line-height: 1.45;
+            color: color-mix(in srgb, var(--ink) 82%, transparent);
+        }
+
+        .format-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .format-option {
+            position: relative;
+        }
+
+        .format-option input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .format-option label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            min-height: 2.7rem;
+            padding: 0.55rem;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+
+        .format-option input:checked + label {
+            border-color: var(--moss);
+            background: color-mix(in srgb, var(--moss) 12%, white);
+            color: var(--moss);
+        }
+
+        /* —— Responsive —— */
+        @media (min-width: 640px) {
+            .topbar-inner {
+                padding: 1rem 1.75rem 1.1rem;
+            }
+
+            .nav-link-btn .nav-text-short { display: none; }
+            .nav-link-btn .nav-text-full { display: inline; }
+
+            .nav-link-btn {
+                padding: 0.55rem 0.7rem;
+            }
+
+            .nav-link-btn i {
+                font-size: 1rem;
+            }
+
+            .content-panel {
+                padding: 1.5rem 1.5rem 1.65rem;
+            }
+
+            .list-toolbar {
+                display: flex;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                align-items: end;
+                justify-content: space-between;
+                gap: 1.75rem;
+            }
+
+            .filter-toggle {
+                display: none;
+            }
+
+            .filter-form,
+            .filter-form.is-open {
+                display: flex;
+                flex: 0 1 auto;
+                flex-wrap: nowrap;
+                width: auto;
+                max-width: none;
+                min-width: 0;
+                gap: 0.75rem;
+                align-items: end;
+            }
+
+            .filter-field-concepto {
+                flex: 0 1 12rem;
+                max-width: 14rem;
+                min-width: 9rem;
+            }
+
+            .filter-field-concepto .form-control {
+                width: 100%;
+            }
+
+            .filter-actions {
+                flex: 0 0 auto;
+                flex-wrap: nowrap;
+                width: auto;
+            }
+
+            .btn-add {
+                margin-left: auto;
+                flex-shrink: 0;
+                justify-self: auto;
+                grid-column: auto;
+                grid-row: auto;
+            }
+        }
+
+        @media (min-width: 900px) {
+            .topbar-inner {
+                padding: 0.95rem 2rem;
+            }
+
+            .topbar-main {
+                display: grid;
+                grid-template-columns: 1fr auto 1fr;
+                grid-template-areas: "brand saldo actions";
+                align-items: center;
+                column-gap: 1.25rem;
+                row-gap: 0;
+            }
+
+            .brand {
+                grid-area: brand;
+                justify-self: start;
+            }
+
+            .brand-mark {
+                width: 2.1rem;
+                height: 2.1rem;
+                border-radius: 0.5rem;
+            }
+
+            .saldo-block {
+                grid-area: saldo;
+                justify-self: center;
+                text-align: center;
+                padding: 0;
+            }
+
+            .topbar-actions {
+                grid-area: actions;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 0.6rem;
+                justify-self: end;
+            }
+
+            .nav-actions {
+                display: flex;
+                width: auto;
+                gap: 0.5rem;
+            }
+
+            .nav-link-btn {
+                width: auto;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
 </head>
-
-<body class="min-vh-100" style="background: linear-gradient(to right, #dac3a3, #edd7b8, #e6caa2, #edd7b8, #dac3a3);">
-    <div>
-        <header class="position-relative mb-4 bg-white shadow p-4">
-            {% if user.is_authenticated %}
-            <form method="post" action="{% url 'logout' %}" class="position-absolute top-0 end-0 m-1">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-outline-secondary">
-                    <i class="bi bi-box-arrow-right"></i>
-                </button>
-            </form>
-            {% endif %}
-
-            <h1 class="fw-bold text-center mb-4">
-                SALDO ACTUAL:
-                {% if saldo_actual > 0 %}
-                    <span class="text-success">{{ saldo_actual|floatformat:2 }}€</span>
-                {% elif saldo_actual < 0 %}
-                    <span class="text-danger">{{ saldo_actual|floatformat:2 }}€</span>
-                {% else %}
-                    <span class="text-body">{{ saldo_actual|floatformat:2 }}€</span>
-                {% endif %}
-            </h1>
-
-            <nav class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="d-flex gap-2">
-                    <a href="{% url 'lista_ingresos' %}" class="btn btn-outline-success">
-                        <i class="bi bi-cash-coin"></i> Ingresos
-                    </a>
-                    <a href="{% url 'lista_gastos' %}" class="btn btn-outline-danger">
-                        <i class="bi bi-cart-dash"></i> Gastos
-                    </a>
-                    <!-- Botón para abrir modal -->
-                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#seguimientoModal">
-                        <i class="bi bi-file-earmark-text me-1"></i> Generar seguimiento
-                    </button>
-                </div>
-            </nav>
-        </header>
-
-        <div class="container">
-            {% block contenido %}{% endblock %}
+<body>
+    <div class="app-shell">
+        <div class="aurora" aria-hidden="true">
+            <span class="blob blob-a"></span>
+            <span class="blob blob-b"></span>
+            <span class="blob blob-c"></span>
+            <span class="blob blob-d"></span>
         </div>
 
-        <!-- Modal -->
-        <div class="modal fade" id="seguimientoModal" tabindex="-1" aria-labelledby="seguimientoModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content shadow">
-                    <div class="modal-header bg-dark text-white">
-                        <h5 class="modal-title" id="seguimientoModalLabel">
-                            <i class="bi bi-file-earmark-text me-2"></i>Generar seguimiento
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        <header class="topbar">
+            <div class="topbar-inner">
+                <div class="topbar-main">
+                    <a href="{% url 'lista_ingresos' %}" class="brand">
+                        <img src="{% static 'finanzas/img/favicon.svg' %}" alt="" class="brand-mark" width="34" height="34">
+                        <span>ODA</span>
+                    </a>
+
+                    <div class="saldo-block">
+                        <p class="saldo-label">Saldo actual</p>
+                        <p class="saldo-value {% if saldo_actual > 0 %}is-positive{% elif saldo_actual < 0 %}is-negative{% else %}is-zero{% endif %}">
+                            {{ saldo_actual|floatformat:2 }}€
+                        </p>
                     </div>
-                    <div class="modal-body">
-                        <form method="get" action="{% url 'generar_seguimiento' %}">
-                            <div class="mb-3">
-                                <label for="fecha_inicio" class="form-label">Desde</label>
-                                <input type="date" class="form-control" name="fecha_inicio" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="fecha_fin" class="form-label">Hasta</label>
-                                <input type="date" class="form-control" name="fecha_fin" required>
-                            </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Formato</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="formato" value="excel" id="formatoExcel" checked>
-                                    <label class="form-check-label" for="formatoExcel">Excel (.xlsx)</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="formato" value="pdf" id="formatoPDF">
-                                    <label class="form-check-label" for="formatoPDF">PDF (.pdf)</label>
-                                </div>
-                            </div>
+                    {% if user.is_authenticated %}
+                    <div class="topbar-actions">
+                        <nav class="nav-actions" aria-label="Secciones">
+                            <a href="{% url 'lista_ingresos' %}"
+                               class="nav-link-btn {% if request.resolver_match and 'ingreso' in request.resolver_match.url_name %}is-active{% endif %}"
+                               title="Ingresos"
+                               aria-label="Ingresos">
+                                <i class="bi bi-cash-coin" aria-hidden="true"></i>
+                                <span class="nav-text-full">Ingresos</span>
+                            </a>
+                            <a href="{% url 'lista_gastos' %}"
+                               class="nav-link-btn {% if request.resolver_match and 'gasto' in request.resolver_match.url_name %}is-active{% endif %}"
+                               title="Gastos"
+                               aria-label="Gastos">
+                                <i class="bi bi-cart-dash" aria-hidden="true"></i>
+                                <span class="nav-text-full">Gastos</span>
+                            </a>
+                            <button type="button"
+                                    class="nav-link-btn"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#seguimientoModal"
+                                    title="Exportar"
+                                    aria-label="Exportar">
+                                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                                <span class="nav-text-full">Exportar</span>
+                            </button>
+                            <button type="button"
+                                    class="nav-link-btn"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#logoutModal"
+                                    title="Salir"
+                                    aria-label="Salir">
+                                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                                <span class="nav-text-full">Salir</span>
+                            </button>
+                        </nav>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
 
-                            <div class="modal-footer">
-                                <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-check-circle me-1"></i> Generar
-                                </button>
+        <main class="content-wrap">
+            <div class="content-panel">
+                {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                    <div class="flash-message {% if message.tags == 'error' %}is-error{% else %}is-success{% endif %}" role="alert">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% block contenido %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <div class="modal fade" id="seguimientoModal" tabindex="-1" aria-labelledby="seguimientoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="seguimientoModalLabel">
+                        <i class="bi bi-file-earmark-text me-2"></i>Generar seguimiento
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="get" action="{% url 'generar_seguimiento' %}">
+                        <div class="mb-3">
+                            <label for="fecha_inicio" class="form-label">Desde</label>
+                            <input type="date" class="form-control" name="fecha_inicio" id="fecha_inicio" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="fecha_fin" class="form-label">Hasta</label>
+                            <input type="date" class="form-control" name="fecha_fin" id="fecha_fin" required>
+                        </div>
+                        <div class="mb-3">
+                            <span class="form-label d-block mb-2">Formato</span>
+                            <div class="format-options">
+                                <div class="format-option">
+                                    <input type="radio" name="formato" value="excel" id="formatoExcel" checked>
+                                    <label for="formatoExcel"><i class="bi bi-file-earmark-excel"></i> Excel</label>
+                                </div>
+                                <div class="format-option">
+                                    <input type="radio" name="formato" value="pdf" id="formatoPDF">
+                                    <label for="formatoPDF"><i class="bi bi-file-earmark-pdf"></i> PDF</label>
+                                </div>
                             </div>
-                        </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn">
+                                <i class="bi bi-check-circle me-1"></i> Generar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">
+                        <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="confirm-text">¿Seguro que quieres salir de ODA?</p>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <div class="modal-footer is-split">
+                            <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-danger-solid">
+                                <i class="bi bi-box-arrow-right me-1"></i> Salir
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">
+                        <i class="bi bi-trash me-2"></i>Eliminar
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="confirm-text" id="deleteModalText">¿Seguro que quieres eliminar este elemento?</p>
+                    <div class="modal-footer is-split">
+                        <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                        <a href="#" id="deleteModalConfirm" class="btn btn-danger-solid">
+                            <i class="bi bi-trash me-1"></i> Eliminar
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
+    <div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewModalLabel">
+                        <i class="bi bi-eye me-2"></i>Detalle del movimiento
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="detail-list">
+                        <div>
+                            <dt>Tipo</dt>
+                            <dd><span class="detail-badge" id="viewModalTipo">—</span></dd>
+                        </div>
+                        <div>
+                            <dt>Fecha</dt>
+                            <dd id="viewModalFecha">—</dd>
+                        </div>
+                        <div>
+                            <dt>Cantidad</dt>
+                            <dd id="viewModalCantidad">—</dd>
+                        </div>
+                        <div>
+                            <dt>Concepto</dt>
+                            <dd id="viewModalConcepto">—</dd>
+                        </div>
+                    </dl>
+                    <div class="modal-footer view-modal-footer">
+                        <button type="button" class="btn" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-
+    <div class="modal fade" id="movementModal" tabindex="-1" aria-labelledby="movementModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="movementModalLabel">
+                        <i class="bi bi-pencil-square me-2" id="movementModalIcon"></i>
+                        <span id="movementModalTitle">Movimiento</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="post" id="movementForm" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="movementFecha" class="form-label">Fecha</label>
+                            <input type="date" class="form-control" name="fecha" id="movementFecha" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="movementCantidad" class="form-label">Cantidad</label>
+                            <input type="number" class="form-control" name="cantidad" id="movementCantidad" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="movementConcepto" class="form-label">Concepto</label>
+                            <textarea class="form-control" name="concepto" id="movementConcepto" rows="4" maxlength="300" required></textarea>
+                        </div>
+                        <div class="modal-footer is-split">
+                            <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn" id="movementSubmit">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("click", function (event) {
+            const deleteTrigger = event.target.closest("[data-delete-url]");
+            if (deleteTrigger) {
+                event.preventDefault();
+
+                const modalEl = document.getElementById("deleteModal");
+                const confirmBtn = document.getElementById("deleteModalConfirm");
+                const textEl = document.getElementById("deleteModalText");
+                if (!modalEl || !confirmBtn || !textEl) return;
+
+                confirmBtn.setAttribute("href", deleteTrigger.getAttribute("data-delete-url"));
+                textEl.textContent = deleteTrigger.getAttribute("data-delete-message")
+                    || "¿Seguro que quieres eliminar este elemento?";
+
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                return;
+            }
+
+            const movementTrigger = event.target.closest("[data-movement-action]");
+            if (movementTrigger) {
+                event.preventDefault();
+
+                const modalEl = document.getElementById("movementModal");
+                const formEl = document.getElementById("movementForm");
+                const titleEl = document.getElementById("movementModalTitle");
+                const iconEl = document.getElementById("movementModalIcon");
+                const submitEl = document.getElementById("movementSubmit");
+                const fechaEl = document.getElementById("movementFecha");
+                const cantidadEl = document.getElementById("movementCantidad");
+                const conceptoEl = document.getElementById("movementConcepto");
+                if (!modalEl || !formEl || !titleEl || !submitEl || !fechaEl || !cantidadEl || !conceptoEl) return;
+
+                const mode = movementTrigger.getAttribute("data-movement-mode") || "create";
+                const tipo = movementTrigger.getAttribute("data-movement-tipo") || "movimiento";
+                const action = movementTrigger.getAttribute("data-movement-action");
+
+                formEl.setAttribute("action", action);
+                titleEl.textContent = movementTrigger.getAttribute("data-movement-title")
+                    || (mode === "edit" ? "Editar " + tipo : "Añadir " + tipo);
+
+                if (iconEl) {
+                    iconEl.className = "bi me-2 " + (mode === "edit" ? "bi-pencil-square" : "bi-plus-circle");
+                }
+
+                submitEl.className = "btn " + (tipo === "gasto" ? "btn-danger-solid" : "btn-success-solid");
+                submitEl.textContent = mode === "edit" ? "Guardar cambios" : "Guardar";
+
+                if (mode === "edit") {
+                    fechaEl.value = movementTrigger.getAttribute("data-movement-fecha") || "";
+                    const rawCantidad = movementTrigger.getAttribute("data-movement-cantidad") || "";
+                    cantidadEl.value = rawCantidad.replace(",", ".");
+                    conceptoEl.value = movementTrigger.getAttribute("data-movement-concepto") || "";
+                } else {
+                    formEl.reset();
+                    const today = new Date();
+                    const yyyy = today.getFullYear();
+                    const mm = String(today.getMonth() + 1).padStart(2, "0");
+                    const dd = String(today.getDate()).padStart(2, "0");
+                    fechaEl.value = yyyy + "-" + mm + "-" + dd;
+                }
+
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                return;
+            }
+
+            const viewTrigger = event.target.closest("[data-view-tipo]");
+            if (!viewTrigger) return;
+
+            event.preventDefault();
+
+            const modalEl = document.getElementById("viewModal");
+            const tipoEl = document.getElementById("viewModalTipo");
+            const fechaEl = document.getElementById("viewModalFecha");
+            const cantidadEl = document.getElementById("viewModalCantidad");
+            const conceptoEl = document.getElementById("viewModalConcepto");
+            if (!modalEl || !tipoEl || !fechaEl || !cantidadEl || !conceptoEl) return;
+
+            const tipo = viewTrigger.getAttribute("data-view-tipo") || "—";
+            const signo = viewTrigger.getAttribute("data-view-signo");
+
+            tipoEl.textContent = tipo;
+            tipoEl.className = "detail-badge " + (signo === "out" ? "is-gasto" : "is-ingreso");
+
+            fechaEl.textContent = viewTrigger.getAttribute("data-view-fecha") || "—";
+            cantidadEl.textContent = viewTrigger.getAttribute("data-view-cantidad") || "—";
+            cantidadEl.className = signo === "out" ? "amount-out" : "amount-in";
+            conceptoEl.textContent = viewTrigger.getAttribute("data-view-concepto") || "—";
+
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        });
+
+        function rangoMesActualISO() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, "0");
+            const first = yyyy + "-" + mm + "-01";
+            const lastDay = new Date(yyyy, today.getMonth() + 1, 0).getDate();
+            const last = yyyy + "-" + mm + "-" + String(lastDay).padStart(2, "0");
+            return { first, last };
+        }
+
+        const seguimientoModal = document.getElementById("seguimientoModal");
+        if (seguimientoModal) {
+            seguimientoModal.addEventListener("show.bs.modal", function () {
+                const exportDesde = document.getElementById("fecha_inicio");
+                const exportHasta = document.getElementById("fecha_fin");
+                if (!exportDesde || !exportHasta) return;
+
+                const filtroDesde = document.getElementById("desde");
+                const filtroHasta = document.getElementById("hasta");
+                const mes = rangoMesActualISO();
+
+                exportDesde.value = (filtroDesde && filtroDesde.value) ? filtroDesde.value : mes.first;
+                exportHasta.value = (filtroHasta && filtroHasta.value) ? filtroHasta.value : mes.last;
+            });
+        }
+
+        (function () {
+            const toggle = document.getElementById("filterToggle");
+            const form = document.getElementById("filterForm");
+            if (!toggle || !form) return;
+
+            function syncFilterVisibility() {
+                const isDesktop = window.matchMedia("(min-width: 640px)").matches;
+                if (isDesktop) {
+                    form.classList.add("is-open");
+                    toggle.setAttribute("aria-expanded", "true");
+                } else if (toggle.getAttribute("aria-expanded") !== "true") {
+                    form.classList.remove("is-open");
+                }
+            }
+
+            toggle.addEventListener("click", function () {
+                const open = toggle.getAttribute("aria-expanded") === "true";
+                toggle.setAttribute("aria-expanded", open ? "false" : "true");
+                form.classList.toggle("is-open", !open);
+            });
+
+            syncFilterVisibility();
+            window.addEventListener("resize", syncFilterVisibility);
+        })();
+    </script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
