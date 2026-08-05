@@ -38,14 +38,29 @@
         </div>
     </form>
 
-    <button type="button"
-            class="btn-add is-gasto"
-            data-movement-mode="create"
-            data-movement-tipo="gasto"
-            data-movement-title="Añadir gasto"
-            data-movement-action="{% url 'añadir_gasto' %}">
-        <i class="bi bi-plus-lg" aria-hidden="true"></i> Añadir gasto
-    </button>
+    <div class="toolbar-actions">
+        <button type="button"
+                class="btn-bulk-delete"
+                data-bs-toggle="modal"
+                data-bs-target="#bulkDeleteModal"
+                title="Eliminar varios"
+                aria-label="Eliminar varios"
+                {% if not todos_movimientos %}disabled{% endif %}>
+            <i class="bi bi-trash3" aria-hidden="true"></i>
+            <span class="btn-label">Eliminar varios</span>
+        </button>
+        <button type="button"
+                class="btn-add is-gasto"
+                data-movement-mode="create"
+                data-movement-tipo="gasto"
+                data-movement-title="Añadir gasto"
+                data-movement-action="{% url 'añadir_gasto' %}"
+                title="Añadir gasto"
+                aria-label="Añadir gasto">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span class="btn-label">Añadir gasto</span>
+        </button>
+    </div>
 </section>
 
 <div class="toolbar-bottom">
@@ -149,4 +164,51 @@
     {% endif %}
 </nav>
 {% endif %}
+{% endblock %}
+
+{% block extra_modals %}
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true"
+     data-bulk-action="{% url 'eliminar_gastos' %}"
+     data-bulk-label="gasto">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkDeleteModalLabel">
+                    <i class="bi bi-trash3 me-2"></i>Eliminar varios gastos
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                {% if todos_movimientos %}
+                <label class="bulk-select-all">
+                    <input type="checkbox" id="bulkSelectAll">
+                    <span>Seleccionar todos ({{ todos_movimientos|length }})</span>
+                </label>
+                <ul class="bulk-list">
+                    {% for gasto in todos_movimientos %}
+                    <li class="bulk-item">
+                        <label>
+                            <input type="checkbox" class="bulk-item-check" name="ids" value="{{ gasto.pk }}">
+                            <span class="bulk-item-meta">
+                                <span class="bulk-item-fecha">{{ gasto.fecha|date:"d/m/Y" }}</span>
+                                <span class="bulk-item-cantidad amount-out">-{{ gasto.cantidad }}€</span>
+                                <span class="bulk-item-concepto" title="{{ gasto.concepto }}">{{ gasto.concepto }}</span>
+                            </span>
+                        </label>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="confirm-text">No hay gastos para eliminar.</p>
+                {% endif %}
+                <div class="modal-footer is-split">
+                    <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger-solid" id="bulkDeleteNext" disabled>
+                        <i class="bi bi-trash me-1"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

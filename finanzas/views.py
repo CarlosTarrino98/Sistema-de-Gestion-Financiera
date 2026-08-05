@@ -7,7 +7,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.http import HttpResponse
-from django.utils import timezone
 from django.utils.dateparse import parse_date
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
 from reportlab.lib.pagesizes import A4
@@ -18,16 +17,8 @@ from reportlab.lib.units import cm
 from django.conf import settings
 from pathlib import Path
 from django.db.models import Sum
-from calendar import monthrange
 
-FILTER_SESSION_KEY = 'listado_filtros'
-
-
-def _rango_mes_actual():
-    hoy = timezone.localdate()
-    inicio = hoy.replace(day=1)
-    fin = hoy.replace(day=monthrange(hoy.year, hoy.month)[1])
-    return inicio.isoformat(), fin.isoformat()
+FILTER_SESSION_KEY = 'listado_filtros_v2'
 
 
 def _guardar_filtros(request, fecha_desde, fecha_hasta, concepto):
@@ -61,10 +52,9 @@ def _filtros_periodo(request):
             guardados.get('concepto', ''),
         )
 
-    # Primera visita: mes actual
-    fecha_desde, fecha_hasta = _rango_mes_actual()
-    _guardar_filtros(request, fecha_desde, fecha_hasta, '')
-    return fecha_desde, fecha_hasta, ''
+    # Primera visita: sin filtros
+    _guardar_filtros(request, '', '', '')
+    return '', '', ''
 
 
 def _aplicar_filtros(queryset, fecha_desde, fecha_hasta, concepto):
@@ -79,9 +69,9 @@ def _aplicar_filtros(queryset, fecha_desde, fecha_hasta, concepto):
 
 @login_required
 def lista_ingresos(request):
-    ingresos = Ingreso.objects.filter(user=request.user).order_by('-fecha')
+    todos_ingresos = Ingreso.objects.filter(user=request.user).order_by('-fecha')
     fecha_desde, fecha_hasta, concepto = _filtros_periodo(request)
-    ingresos = _aplicar_filtros(ingresos, fecha_desde, fecha_hasta, concepto)
+    ingresos = _aplicar_filtros(todos_ingresos, fecha_desde, fecha_hasta, concepto)
 
     total_filtrado = ingresos.aggregate(total=Sum('cantidad'))['total'] or 0
     page_obj = Paginator(ingresos, 20).get_page(request.GET.get('page'))
@@ -89,6 +79,7 @@ def lista_ingresos(request):
     return render(request, 'finanzas/lista_ingresos.html', {
         'ingresos': page_obj,
         'page_obj': page_obj,
+        'todos_movimientos': todos_ingresos,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
         'concepto': concepto,
@@ -98,9 +89,9 @@ def lista_ingresos(request):
 
 @login_required
 def lista_gastos(request):
-    gastos = Gasto.objects.filter(user=request.user).order_by('-fecha')
+    todos_gastos = Gasto.objects.filter(user=request.user).order_by('-fecha')
     fecha_desde, fecha_hasta, concepto = _filtros_periodo(request)
-    gastos = _aplicar_filtros(gastos, fecha_desde, fecha_hasta, concepto)
+    gastos = _aplicar_filtros(todos_gastos, fecha_desde, fecha_hasta, concepto)
 
     total_filtrado = gastos.aggregate(total=Sum('cantidad'))['total'] or 0
     page_obj = Paginator(gastos, 20).get_page(request.GET.get('page'))
@@ -108,6 +99,7 @@ def lista_gastos(request):
     return render(request, 'finanzas/lista_gastos.html', {
         'gastos': page_obj,
         'page_obj': page_obj,
+        'todos_movimientos': todos_gastos,
         'fecha_desde': fecha_desde,
         'fecha_hasta': fecha_hasta,
         'concepto': concepto,
@@ -182,6 +174,40 @@ def eliminar_ingreso(request, pk):
 def eliminar_gasto(request, pk):
     gasto = get_object_or_404(Gasto, pk=pk, user=request.user)
     gasto.delete()
+    return redirect('lista_gastos')
+
+
+@login_required
+def eliminar_ingresos(request):
+    if request.method == 'POST':
+        ids = request.POST.getlist('ids')
+        qs = Ingreso.objects.filter(user=request.user, pk__in=ids)
+        count = qs.count()
+        qs.delete()
+        if count:
+            messages.success(
+                request,
+                f'Se eliminó {count} ingreso.' if count == 1 else f'Se eliminaron {count} ingresos.',
+            )
+        else:
+            messages.error(request, 'No se seleccionó ningún ingreso.')
+    return redirect('lista_ingresos')
+
+
+@login_required
+def eliminar_gastos(request):
+    if request.method == 'POST':
+        ids = request.POST.getlist('ids')
+        qs = Gasto.objects.filter(user=request.user, pk__in=ids)
+        count = qs.count()
+        qs.delete()
+        if count:
+            messages.success(
+                request,
+                f'Se eliminó {count} gasto.' if count == 1 else f'Se eliminaron {count} gastos.',
+            )
+        else:
+            messages.error(request, 'No se seleccionó ningún gasto.')
     return redirect('lista_gastos')
 
 @login_required

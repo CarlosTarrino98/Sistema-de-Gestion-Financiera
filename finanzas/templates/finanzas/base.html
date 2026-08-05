@@ -464,6 +464,7 @@
 
         .btn-filter,
         .btn-add,
+        .btn-bulk-delete,
         .btn-clear {
             display: inline-flex;
             align-items: center;
@@ -506,15 +507,13 @@
         }
 
         .btn-add {
-            grid-column: 2;
-            grid-row: 1;
-            justify-self: stretch;
             background: var(--positive);
             color: #fff;
             flex-shrink: 0;
         }
 
-        button.btn-add {
+        button.btn-add,
+        button.btn-bulk-delete {
             font: inherit;
         }
 
@@ -526,6 +525,54 @@
             filter: brightness(0.95);
             color: #fff;
             transform: translateY(-1px);
+        }
+
+        .btn-bulk-delete {
+            background: rgba(255, 255, 255, 0.75);
+            border-color: color-mix(in srgb, var(--negative) 35%, var(--line));
+            color: var(--negative);
+            flex-shrink: 0;
+        }
+
+        .btn-bulk-delete:hover:not(:disabled) {
+            background: var(--negative);
+            border-color: var(--negative);
+            color: #fff;
+            filter: brightness(0.95);
+            transform: translateY(-1px);
+        }
+
+        .btn-bulk-delete:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .toolbar-actions {
+            grid-column: 2;
+            grid-row: 1;
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 0.55rem;
+            justify-content: flex-end;
+            justify-self: stretch;
+            align-items: stretch;
+        }
+
+        .toolbar-actions .btn-add,
+        .toolbar-actions .btn-bulk-delete {
+            flex: 0 0 auto;
+            min-width: 2.65rem;
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        .toolbar-actions .btn-label {
+            display: none;
+        }
+
+        .toolbar-actions .btn-add i,
+        .toolbar-actions .btn-bulk-delete i {
+            font-size: 1.05rem;
         }
 
         .toolbar-bottom {
@@ -934,34 +981,196 @@
             width: 100%;
         }
 
+        .bulk-select-all {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin-bottom: 0.85rem;
+            padding: 0.65rem 0.75rem;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.65);
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .bulk-select-all input,
+        .bulk-item input {
+            width: 1.1rem;
+            height: 1.1rem;
+            accent-color: var(--negative);
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .bulk-list {
+            list-style: none;
+            margin: 0 0 0.5rem;
+            padding: 0;
+            max-height: min(48vh, 22rem);
+            overflow: auto;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.55);
+        }
+
+        .bulk-item {
+            border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+        }
+
+        .bulk-item:last-child {
+            border-bottom: none;
+        }
+
+        .bulk-item label {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.7rem;
+            margin: 0;
+            padding: 0.7rem 0.8rem;
+            cursor: pointer;
+        }
+
+        .bulk-item label:hover {
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        .bulk-item-meta {
+            display: grid;
+            grid-template-columns: 5.5rem 5.5rem minmax(0, 1fr);
+            gap: 0.45rem 0.65rem;
+            align-items: baseline;
+            min-width: 0;
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        .bulk-item-fecha {
+            font-weight: 600;
+            color: color-mix(in srgb, var(--ink) 72%, transparent);
+        }
+
+        .bulk-item-cantidad {
+            font-family: "Bricolage Grotesque", sans-serif;
+            font-weight: 700;
+        }
+
+        .bulk-item-concepto {
+            grid-column: 1 / -1;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            color: var(--ink);
+            line-height: 1.35;
+        }
+
+        @media (min-width: 520px) {
+            .bulk-item-concepto {
+                grid-column: auto;
+            }
+        }
+
         #movementForm textarea.form-control {
             min-height: 6rem;
             resize: vertical;
         }
 
-        .flash-messages {
+        .toast-stack {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            bottom: auto;
+            z-index: 1100;
             display: grid;
-            gap: 0.55rem;
-            margin-bottom: 1rem;
+            gap: 0.65rem;
+            width: min(22rem, calc(100vw - 2rem));
+            pointer-events: none;
         }
 
-        .flash-message {
-            padding: 0.75rem 0.95rem;
-            border-radius: 12px;
+        @media (min-width: 640px) {
+            .toast-stack {
+                top: auto;
+                bottom: 1.25rem;
+                right: 1.25rem;
+            }
+        }
+
+        .app-toast {
+            pointer-events: auto;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.7rem;
+            padding: 0.85rem 1rem;
+            border-radius: 14px;
             font-weight: 600;
             font-size: 0.92rem;
+            line-height: 1.35;
+            box-shadow: 0 12px 32px rgba(28, 41, 34, 0.18);
+            border: 1px solid transparent;
+            background: #fff;
+            color: var(--ink);
+            transform: translateY(-0.4rem);
+            opacity: 0;
+            animation: toast-in 0.28s ease forwards;
         }
 
-        .flash-message.is-error {
-            background: color-mix(in srgb, var(--danger, #9b3a2f) 12%, white);
-            color: var(--negative);
-            border: 1px solid color-mix(in srgb, var(--negative) 25%, transparent);
+        .app-toast.is-leaving {
+            animation: toast-out 0.22s ease forwards;
         }
 
-        .flash-message.is-success {
-            background: color-mix(in srgb, var(--positive) 12%, white);
+        .app-toast.is-success {
+            background: color-mix(in srgb, var(--positive) 10%, white);
+            border-color: color-mix(in srgb, var(--positive) 28%, transparent);
             color: var(--positive);
-            border: 1px solid color-mix(in srgb, var(--positive) 25%, transparent);
+        }
+
+        .app-toast.is-error {
+            background: color-mix(in srgb, var(--negative) 10%, white);
+            border-color: color-mix(in srgb, var(--negative) 28%, transparent);
+            color: var(--negative);
+        }
+
+        .app-toast i {
+            font-size: 1.1rem;
+            margin-top: 0.1rem;
+            flex-shrink: 0;
+        }
+
+        .app-toast-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .app-toast-close {
+            flex-shrink: 0;
+            margin: -0.2rem -0.25rem -0.2rem 0;
+            padding: 0.2rem;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            opacity: 0.65;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .app-toast-close:hover {
+            opacity: 1;
+        }
+
+        @keyframes toast-in {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes toast-out {
+            to {
+                transform: translateY(-0.35rem);
+                opacity: 0;
+            }
         }
 
         .confirm-text {
@@ -1071,12 +1280,29 @@
                 width: auto;
             }
 
-            .btn-add {
+            .btn-add,
+            .toolbar-actions {
                 margin-left: auto;
                 flex-shrink: 0;
                 justify-self: auto;
                 grid-column: auto;
                 grid-row: auto;
+            }
+
+            .toolbar-actions {
+                flex-wrap: nowrap;
+                gap: 0.65rem;
+            }
+
+            .toolbar-actions .btn-add,
+            .toolbar-actions .btn-bulk-delete {
+                flex: 0 0 auto;
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .toolbar-actions .btn-label {
+                display: inline;
             }
         }
 
@@ -1202,18 +1428,22 @@
 
         <main class="content-wrap">
             <div class="content-panel">
-                {% if messages %}
-                <div class="flash-messages">
-                    {% for message in messages %}
-                    <div class="flash-message {% if message.tags == 'error' %}is-error{% else %}is-success{% endif %}" role="alert">
-                        {{ message }}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
                 {% block contenido %}{% endblock %}
             </div>
         </main>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true">
+        {% for message in messages %}
+        <div class="app-toast {% if message.tags == 'error' %}is-error{% else %}is-success{% endif %}" role="status"
+             data-toast-auto>
+            <i class="bi {% if message.tags == 'error' %}bi-exclamation-circle{% else %}bi-check-circle{% endif %}" aria-hidden="true"></i>
+            <div class="app-toast-body">{{ message }}</div>
+            <button type="button" class="app-toast-close" aria-label="Cerrar">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+        </div>
+        {% endfor %}
     </div>
 
     <div class="modal fade" id="seguimientoModal" tabindex="-1" aria-labelledby="seguimientoModalLabel" aria-hidden="true">
@@ -1305,6 +1535,34 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="bulkDeleteConfirmModal" tabindex="-1" aria-labelledby="bulkDeleteConfirmLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bulkDeleteConfirmLabel">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmar eliminación
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="confirm-text" id="bulkDeleteConfirmText">¿Seguro que quieres eliminar los movimientos seleccionados?</p>
+                    <div class="modal-footer is-split">
+                        <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger-solid" id="bulkDeleteConfirmBtn">
+                            <i class="bi bi-trash me-1"></i> Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="bulkDeleteForm" class="d-none" hidden>
+        {% csrf_token %}
+    </form>
+
+    {% block extra_modals %}{% endblock %}
 
     <div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -1519,6 +1777,132 @@
 
             syncFilterVisibility();
             window.addEventListener("resize", syncFilterVisibility);
+        })();
+
+        (function () {
+            const bulkModal = document.getElementById("bulkDeleteModal");
+            const confirmModal = document.getElementById("bulkDeleteConfirmModal");
+            const bulkForm = document.getElementById("bulkDeleteForm");
+            if (!bulkModal || !confirmModal || !bulkForm) return;
+
+            const selectAll = document.getElementById("bulkSelectAll");
+            const nextBtn = document.getElementById("bulkDeleteNext");
+            const confirmBtn = document.getElementById("bulkDeleteConfirmBtn");
+            const confirmText = document.getElementById("bulkDeleteConfirmText");
+
+            let pendingIds = [];
+
+            function itemChecks() {
+                return Array.from(bulkModal.querySelectorAll(".bulk-item-check"));
+            }
+
+            function selectedChecks() {
+                return itemChecks().filter(function (el) { return el.checked; });
+            }
+
+            function syncBulkUI() {
+                const all = itemChecks();
+                const selected = selectedChecks();
+                if (nextBtn) nextBtn.disabled = selected.length === 0;
+                if (selectAll) {
+                    selectAll.checked = all.length > 0 && selected.length === all.length;
+                    selectAll.indeterminate = selected.length > 0 && selected.length < all.length;
+                }
+            }
+
+            if (selectAll) {
+                selectAll.addEventListener("change", function () {
+                    itemChecks().forEach(function (el) {
+                        el.checked = selectAll.checked;
+                    });
+                    syncBulkUI();
+                });
+            }
+
+            bulkModal.addEventListener("change", function (event) {
+                if (event.target.classList.contains("bulk-item-check")) {
+                    syncBulkUI();
+                }
+            });
+
+            bulkModal.addEventListener("show.bs.modal", function () {
+                pendingIds = [];
+                itemChecks().forEach(function (el) { el.checked = false; });
+                if (selectAll) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                }
+                syncBulkUI();
+            });
+
+            if (nextBtn) {
+                nextBtn.addEventListener("click", function () {
+                    const selected = selectedChecks();
+                    if (!selected.length) return;
+
+                    pendingIds = selected.map(function (el) { return el.value; });
+                    const label = bulkModal.getAttribute("data-bulk-label") || "movimiento";
+                    const plural = pendingIds.length === 1 ? label : label + "s";
+                    if (confirmText) {
+                        confirmText.textContent = "¿Seguro que quieres eliminar "
+                            + pendingIds.length + " " + plural + "? Esta acción no se puede deshacer.";
+                    }
+
+                    const bulkInstance = bootstrap.Modal.getOrCreateInstance(bulkModal);
+                    const onHidden = function () {
+                        bulkModal.removeEventListener("hidden.bs.modal", onHidden);
+                        bootstrap.Modal.getOrCreateInstance(confirmModal).show();
+                    };
+                    bulkModal.addEventListener("hidden.bs.modal", onHidden);
+                    bulkInstance.hide();
+                });
+            }
+
+            if (confirmBtn) {
+                confirmBtn.addEventListener("click", function () {
+                    const action = bulkModal.getAttribute("data-bulk-action");
+                    if (!action || !pendingIds.length) return;
+
+                    bulkForm.setAttribute("action", action);
+                    bulkForm.querySelectorAll('input[name="ids"]').forEach(function (el) {
+                        el.remove();
+                    });
+                    pendingIds.forEach(function (id) {
+                        const input = document.createElement("input");
+                        input.type = "hidden";
+                        input.name = "ids";
+                        input.value = id;
+                        bulkForm.appendChild(input);
+                    });
+                    bulkForm.submit();
+                });
+            }
+        })();
+        (function () {
+            const stack = document.getElementById("toastStack");
+            if (!stack) return;
+
+            function dismissToast(toast) {
+                if (!toast || toast.classList.contains("is-leaving")) return;
+                toast.classList.add("is-leaving");
+                window.setTimeout(function () {
+                    toast.remove();
+                }, 220);
+            }
+
+            stack.querySelectorAll("[data-toast-auto]").forEach(function (toast) {
+                const timer = window.setTimeout(function () {
+                    dismissToast(toast);
+                }, 4200);
+
+                const closeBtn = toast.querySelector(".app-toast-close");
+                if (closeBtn) {
+                    closeBtn.addEventListener("click", function () {
+                        window.clearTimeout(timer);
+                        dismissToast(toast);
+                    });
+                }
+            });
         })();
     </script>
     {% block extra_js %}{% endblock %}

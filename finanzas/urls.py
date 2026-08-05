@@ -12,6 +12,8 @@ urlpatterns = [
     path('editar/gasto/<int:pk>/', views.editar_gasto, name='editar_gasto'),
     path('eliminar/ingreso/<int:pk>/', views.eliminar_ingreso, name='eliminar_ingreso'),
     path('eliminar/gasto/<int:pk>/', views.eliminar_gasto, name='eliminar_gasto'),
+    path('eliminar/ingresos/', views.eliminar_ingresos, name='eliminar_ingresos'),
+    path('eliminar/gastos/', views.eliminar_gastos, name='eliminar_gastos'),
     path('seguimiento/', views.generar_seguimiento, name='generar_seguimiento'),
 ]
 
